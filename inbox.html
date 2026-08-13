@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>DNS & IP Authentication Checker</title>
+<style>
+:root{
+  --bg:#f5f7fb;--surface:#fff;--surface2:#f8fafc;--border:#e5e7eb;
+  --text:#172033;--muted:#667085;--primary:#2563eb;--primary2:#1d4ed8;
+  --success:#16a34a;--danger:#dc2626;--warning:#d97706;--shadow:0 12px 35px rgba(16,24,40,.08);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.header{background:#fff;border-bottom:1px solid var(--border);padding:20px 34px;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:13px}.logo{width:42px;height:42px;border-radius:12px;background:#2563eb;color:#fff;display:grid;place-items:center;font-weight:800;box-shadow:0 7px 18px rgba(37,99,235,.25)}
+.brand h1{font-size:18px;margin:0}.brand p{margin:3px 0 0;color:var(--muted);font-size:12px}
+.badge{padding:7px 11px;border:1px solid #dbe4f0;border-radius:999px;font-size:12px;color:#475467;background:#f8fafc}
+.container{max-width:1450px;margin:28px auto;padding:0 24px}
+.grid{display:grid;grid-template-columns:420px 1fr;gap:22px;align-items:start}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow)}
+.card-head{padding:20px 21px 12px}.card-head h2{font-size:15px;margin:0 0 5px}.card-head p{font-size:12px;color:var(--muted);margin:0;line-height:1.5}
+textarea{width:100%;height:360px;border:1px solid #d7dce5;border-radius:12px;padding:14px;font:13px/1.65 ui-monospace,SFMono-Regular,Menlo,monospace;resize:vertical;outline:none;background:#fbfcfe}
+textarea:focus{border-color:#8db2ff;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.input-wrap{padding:7px 21px 21px}
+.actions{display:flex;gap:9px;margin-top:12px}.btn{border:0;border-radius:10px;padding:11px 15px;font-weight:700;font-size:13px;cursor:pointer}.primary{background:var(--primary);color:#fff}.primary:hover{background:var(--primary2)}.secondary{background:#eef2f7;color:#344054}.ghost{background:transparent;color:#475467;border:1px solid var(--border)}
+.options{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:13px}.option{border:1px solid var(--border);background:var(--surface2);border-radius:10px;padding:10px;font-size:12px}.option input{accent-color:var(--primary);margin-right:7px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}.stat{background:#fff;border:1px solid var(--border);border-radius:13px;padding:15px 16px}.stat .label{font-size:11px;color:var(--muted)}.stat .num{font-size:24px;font-weight:800;margin-top:4px}
+.toolbar{padding:13px 16px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center;justify-content:space-between}.filters{display:flex;gap:7px;flex-wrap:wrap}.filter{border:1px solid var(--border);background:#fff;border-radius:8px;padding:7px 10px;font-size:11px;cursor:pointer}.filter.active{background:#eaf1ff;border-color:#b9d0ff;color:#1d4ed8;font-weight:700}
+.table-wrap{overflow:auto;max-height:640px}table{width:100%;border-collapse:collapse;font-size:12px;min-width:900px}th{position:sticky;top:0;background:#f8fafc;color:#667085;text-align:left;font-weight:700;border-bottom:1px solid var(--border);padding:11px 12px;z-index:1}td{padding:12px;border-bottom:1px solid #eef1f5;vertical-align:top}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.status{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border-radius:999px;font-size:10px;font-weight:800}.ok{background:#eaf8ef;color:#16803a}.bad{background:#fef0f0;color:#c52222}.warn{background:#fff6e5;color:#a65b00}.neutral{background:#f1f3f6;color:#667085}
+.checks{display:flex;gap:5px;flex-wrap:wrap}.check{font-size:10px;padding:4px 7px;border-radius:6px;background:#f2f4f7;color:#667085}.check.ok{background:#eaf8ef;color:#16803a}.check.bad{background:#fef0f0;color:#c52222}.check.warn{background:#fff6e5;color:#a65b00}.check.pass{background:#eaf8ef;color:#16803a}.check.softfail{background:#fff6e5;color:#a65b00}.check.fail{background:#fef0f0;color:#c52222}.check.none{background:#f2f4f7;color:#667085}.check.neutral{background:#f2f4f7;color:#667085}.check.temperror{background:#fff6e5;color:#a65b00}.check.permerror{background:#fef0f0;color:#c52222}
+.empty{text-align:center;padding:70px 20px;color:var(--muted)}.empty strong{display:block;color:#344054;margin-bottom:5px}
+.footer-note{font-size:11px;color:var(--muted);margin-top:10px;line-height:1.5}
+.copy-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.copy-btn{border:1px solid var(--border);background:#fff;color:#344054;border-radius:8px;padding:7px 9px;font-size:11px;font-weight:700;cursor:pointer}.copy-btn:hover{background:#f8fafc;border-color:#cbd5e1}.row-copy{border:1px solid #dbe4f0;background:#fff;color:#2563eb;border-radius:7px;padding:4px 7px;font-size:10px;font-weight:700;cursor:pointer}.row-copy:hover{background:#eef4ff}.progress-info{display:none;font-size:11px;color:var(--muted);margin-top:7px}
+.progress{height:3px;background:#e8edf5;overflow:hidden;display:none}.progress i{display:block;height:100%;width:30%;background:#2563eb;animation:load 1s infinite}@keyframes load{0%{transform:translateX(-120%)}100%{transform:translateX(430%)}}
+@media(max-width:1050px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.header{padding:16px}.container{padding:0 12px}.stats{grid-template-columns:1fr 1fr}.options{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="brand"><div class="logo">✓</div><div><h1>DNS & IP Authentication Checker</h1><p>EMS bulk validation dashboard</p></div></div>
+  <div class="badge">v1.0 · Client-side</div>
+</header>
+
+<main class="container">
+  <div class="grid">
+    <section class="card">
+      <div class="card-head">
+        <h2>Bulk input</h2>
+        <p>One entry per line. Supports both <b>IP:domain</b> and <b>domain:IP</b>. Example: <span class="mono">51.77.106.49:adobsikepanjen.org</span></p>
+      </div>
+      <div class="input-wrap">
+        <textarea id="input" spellcheck="false" placeholder="51.77.106.49:adobsikepanjen.org
+51.77.106.50:meditationfree.in
+51.77.106.51:jbav257.com
+adobsikepanjen.org:51.77.106.49"></textarea>
+        <div class="options">
+          <label class="option"><input id="ptr" type="checkbox" checked> Check PTR / reverse DNS</label>
+          <label class="option"><input id="a" type="checkbox" checked> Check A record</label>
+          <label class="option"><input id="mx" type="checkbox" checked> Check MX record</label>
+          <label class="option"><input id="spf" type="checkbox" checked> Check SPF</label>
+          <label class="option"><input id="dmarc" type="checkbox" checked> Check DMARC</label>
+          <label class="option"><input id="strict" type="checkbox"> Strict mode</label>
+        </div>
+        <div class="actions">
+          <button class="btn primary" onclick="runChecks()">Run authentication check</button>
+          <button class="btn secondary" onclick="loadDemo()">Demo</button>
+          <button class="btn ghost" onclick="clearAll()">Clear</button>
+        </div>
+        <div class="progress" id="progress"><i></i></div><div class="progress-info" id="progressInfo">Checking 0 / 0...</div>
+        <div class="footer-note">
+          DNS checks use public DNS-over-HTTPS resolvers. Browser/network policies can occasionally block a lookup; such cases are shown as <b>Unavailable</b>, not automatically treated as invalid.
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="stats">
+        <div class="stat"><div class="label">TOTAL</div><div class="num" id="total">0</div></div>
+        <div class="stat"><div class="label">VALID</div><div class="num" id="valid">0</div></div>
+        <div class="stat"><div class="label">ISSUES</div><div class="num" id="issues">0</div></div>
+        <div class="stat"><div class="label">UNAVAILABLE</div><div class="num" id="unavailable">0</div></div>
+      </div>
+
+      <div class="card">
+        <div class="toolbar">
+          <div class="filters">
+            <button class="filter active" data-filter="all">All</button>
+            <button class="filter" data-filter="valid">Valid</button>
+            <button class="filter" data-filter="issues">Issues</button>
+            <button class="filter" data-filter="unavailable">Unavailable</button>
+          </div>
+          <div class="copy-actions">
+            <button class="copy-btn" onclick="copyFiltered('all')">Copy All</button>
+            <button class="copy-btn" onclick="copyFiltered('valid')">Copy Valid</button>
+            <button class="copy-btn" onclick="copyFiltered('issues')">Copy Issues</button>
+            <button class="copy-btn" onclick="copyFiltered('unavailable')">Copy N/A</button>
+            <button class="btn secondary" onclick="exportCSV()">Export CSV</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>#</th><th>Domain</th><th>IP</th><th>Overall</th><th>PTR</th><th>A</th><th>MX</th><th>SPF</th><th>DMARC</th><th>Details</th>
+            </tr></thead>
+            <tbody id="results">
+              <tr><td colspan="10"><div class="empty"><strong>No checks run yet</strong>Paste your bulk entries and start the validation.</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+let rows=[], currentFilter="all";
+
+function isDomainName(domain){
+  if(!domain || domain.length>253 || !domain.includes(".")) return false;
+  const labels=domain.split(".");
+  return labels.every(label =>
+    label.length>=1 &&
+    label.length<=63 &&
+    /^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$/.test(label)
+  );
+}
+function parseInput(){
+  return document.getElementById("input").value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean).map((line,i)=>{
+    const p=line.split(":").map(x=>x.trim());
+    if(p.length!==2) return {line,n:i+1,ip:"",domain:"",format:"invalid"};
+    const left=p[0], right=p[1];
+    const leftIsIP=isIPv4(left), rightIsIP=isIPv4(right);
+    if(leftIsIP && isDomainName(right)) return {line,n:i+1,ip:left,domain:right,format:"IP:domain"};
+    if(rightIsIP && isDomainName(left)) return {line,n:i+1,ip:right,domain:left,format:"domain:IP"};
+    return {line,n:i+1,ip:"",domain:"",format:"invalid"};
+  });
+}
+function isIPv4(ip){const p=ip.split(".");return p.length===4&&p.every(x=>/^\d+$/.test(x)&&+x>=0&&+x<=255)}
+function escapeHtml(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function dnsUrl(name,type){return "https://dns.google/resolve?name="+encodeURIComponent(name)+"&type="+type}
+const dnsCache=new Map();
+const DNS_MAX_CONCURRENT=18;
+let dnsActive=0;
+const dnsWaiters=[];
+
+function acquireDnsSlot(){
+  if(dnsActive<DNS_MAX_CONCURRENT){dnsActive++;return Promise.resolve();}
+  return new Promise(resolve=>dnsWaiters.push(resolve));
+}
+function releaseDnsSlot(){
+  dnsActive--;
+  if(dnsWaiters.length){
+    dnsActive++;
+    dnsWaiters.shift()();
+  }
+}
+async function dns(name,type){
+  const key=String(name).toLowerCase()+"|"+type;
+  if(dnsCache.has(key)) return dnsCache.get(key);
+
+  const promise=(async()=>{
+    await acquireDnsSlot();
+    try{
+      const r=await fetch(dnsUrl(name,type),{
+        headers:{accept:"application/dns-json"},
+        cache:"force-cache"
+      });
+      if(!r.ok) throw new Error("HTTP "+r.status);
+      return await r.json();
+    }catch(e){
+      return {unavailable:true,error:e.message};
+    }finally{
+      releaseDnsSlot();
+    }
+  })();
+
+  dnsCache.set(key,promise);
+  const result=await promise;
+  if(result && result.unavailable) dnsCache.delete(key);
+  return result;
+}
+
+function answers(d){return d && Array.isArray(d.Answer)?d.Answer:[]}
+
+function ipToInt(ip){
+  const p=ip.split(".").map(Number);
+  return (((p[0]*256+p[1])*256+p[2])*256+p[3])>>>0;
+}
+function ipToInt(ip){
+  const p=ip.split(".").map(Number);
+  return (((p[0]*256+p[1])*256+p[2])*256+p[3])>>>0;
+}
+function ipv4InCidr(ip,cidr){
+  const parts=cidr.split("/");
+  if(!isIPv4(ip) || !isIPv4(parts[0])) return false;
+  const bits=parts.length>1?Number(parts[1]):32;
+  if(!Number.isInteger(bits)||bits<0||bits>32) return false;
+  const mask=bits===0?0:(0xFFFFFFFF << (32-bits))>>>0;
+  return ((ipToInt(ip)&mask)>>>0)===((ipToInt(parts[0])&mask)>>>0);
+}
+function extractSpfRecords(data){
+  return answers(data).map(x=>String(x.data||"").trim()).filter(x=>/^v=spf1(?:\s|$)/i.test(x));
+}
+function qualifierOf(raw){
+  const c=(raw||"").charAt(0);
+  return "+-~?".includes(c)?c:"+";
+}
+function spfResultFromQualifier(q){
+  return q==="-"?"fail":q==="~"?"softfail":q==="?"?"neutral":"pass";
+}
+function spfResult(status,detail,meta={}){
+  return {status,detail,...meta};
+}
+async function getAAddresses(domain,ctx){
+  ctx.lookups++;
+  if(ctx.lookups>10) return {error:"limit"};
+  const d=await dns(domain,1);
+  if(d.unavailable) return {error:"temperror",addresses:[]};
+  return {error:null,addresses:answers(d).map(x=>x.data).filter(isIPv4)};
+}
+async function getMxHosts(domain,ctx){
+  ctx.lookups++;
+  if(ctx.lookups>10) return {error:"limit",hosts:[]};
+  const d=await dns(domain,15);
+  if(d.unavailable) return {error:"temperror",hosts:[]};
+  return {error:null,hosts:answers(d).map(x=>String(x.data||"").split(/\s+/)[1]?.replace(/\.$/,"")).filter(Boolean)};
+}
+async function evaluateSpf(domain, ip, ctx){
+  ctx=ctx||{visited:new Set(),depth:0,lookups:0,voids:0,trace:[]};
+  const key=domain.toLowerCase().replace(/\.$/,"");
+
+  if(ctx.depth>10) return spfResult("permerror","SPF recursion limit exceeded",ctx);
+  if(ctx.visited.has(key)) return spfResult("permerror","SPF include/redirect loop detected",ctx);
+  if(ctx.lookups>=10) return spfResult("permerror","SPF DNS lookup limit exceeded (10)",ctx);
+
+  ctx.visited.add(key);
+  ctx.trace.push(domain);
+
+  const txt=await dns(domain,16);
+  ctx.lookups++;
+  if(txt.unavailable) return spfResult("temperror",`Temporary DNS error retrieving SPF for ${domain}`,ctx);
+
+  const records=extractSpfRecords(txt);
+  if(records.length===0){
+    ctx.voids++;
+    return spfResult("none",`No SPF record found for ${domain}`,ctx);
+  }
+  if(records.length>1) return spfResult("permerror",`Multiple SPF records found for ${domain}`,ctx);
+
+  const record=records[0];
+  const terms=record.split(/\s+/).slice(1).filter(Boolean);
+  let redirect=null;
+  let matched=false;
+
+  // Evaluate mechanisms strictly left-to-right, as SPF does.
+  for(const raw of terms){
+    if(/^exp=/i.test(raw)){
+      continue;
+    }
+    if(/^redirect=/i.test(raw)){
+      redirect=raw.substring(raw.indexOf("=")+1).replace(/\.$/,"");
+      continue;
+    }
+
+    const q=qualifierOf(raw);
+    const term=raw.replace(/^[+?~-]/,"");
+
+    if(/^ip4:/i.test(term)){
+      if(ipv4InCidr(ip,term.substring(4))){
+        matched=true;
+        return spfResult(spfResultFromQualifier(q),`Matched ${raw} in ${domain}`,ctx);
+      }
+      continue;
+    }
+
+    if(/^ip6:/i.test(term)){
+      // Current bulk input is IPv4; IPv6 mechanisms cannot match it.
+      continue;
+    }
+
+    if(/^include:/i.test(term)){
+      const target=term.substring(8).replace(/\.$/,"");
+      if(!target) return spfResult("permerror",`Invalid include mechanism in ${domain}`,ctx);
+      const child=await evaluateSpf(target,ip,{
+        visited:new Set(ctx.visited),
+        depth:ctx.depth+1,
+        lookups:ctx.lookups,
+        voids:ctx.voids,
+        trace:ctx.trace.slice()
+      });
+      ctx.lookups=child.lookups;
+      ctx.voids=child.voids;
+
+      if(child.status==="pass"){
+        return spfResult(spfResultFromQualifier(q),`Matched include:${target} → ${child.detail}`,ctx);
+      }
+      if(child.status==="temperror" || child.status==="permerror"){
+        return spfResult(child.status,`include:${target} → ${child.detail}`,ctx);
+      }
+      // include only matches on PASS; fail/softfail/neutral/none continue.
+      continue;
+    }
+
+    if(/^a(?::|\/|$)/i.test(term)){
+      let rest=term.substring(1);
+      let target=domain;
+      let cidr=null;
+      if(rest.startsWith(":")) rest=rest.substring(1);
+      if(rest){
+        const slash=rest.indexOf("/");
+        if(slash>=0){target=rest.substring(0,slash);cidr=rest.substring(slash+1)}
+        else target=rest;
+      }
+      target=target.replace(/\.$/,"");
+      const a=await getAAddresses(target,ctx);
+      if(a.error==="limit") return spfResult("permerror","SPF DNS lookup limit exceeded while evaluating A:"+target,ctx);
+      if(a.error==="temperror") return spfResult("temperror","Temporary DNS error while evaluating A:"+target,ctx);
+      const hit=a.addresses.some(x=>cidr?ipv4InCidr(ip,x+"/"+cidr):x===ip);
+      if(hit) return spfResult(spfResultFromQualifier(q),`Matched A:${target}${cidr?"/"+cidr:""} → ${ip}`,ctx);
+      continue;
+    }
+
+    if(/^mx(?::|\/|$)/i.test(term)){
+      let rest=term.substring(2);
+      let target=domain;
+      let cidr=null;
+      if(rest.startsWith(":")) rest=rest.substring(1);
+      if(rest){
+        const slash=rest.indexOf("/");
+        if(slash>=0){target=rest.substring(0,slash);cidr=rest.substring(slash+1)}
+        else target=rest;
+      }
+      target=target.replace(/\.$/,"");
+      const mx=await getMxHosts(target,ctx);
+      if(mx.error==="limit") return spfResult("permerror","SPF DNS lookup limit exceeded while evaluating MX:"+target,ctx);
+      if(mx.error==="temperror") return spfResult("temperror","Temporary DNS error while evaluating MX:"+target,ctx);
+
+      for(const host of mx.hosts){
+        const a=await getAAddresses(host,ctx);
+        if(a.error==="limit") return spfResult("permerror","SPF DNS lookup limit exceeded while evaluating MX host "+host,ctx);
+        if(a.error==="temperror") return spfResult("temperror","Temporary DNS error while evaluating MX host "+host,ctx);
+        if(a.addresses.some(x=>cidr?ipv4InCidr(ip,x+"/"+cidr):x===ip)){
+          return spfResult(spfResultFromQualifier(q),`Matched MX:${target} → ${host} → ${ip}`,ctx);
+        }
+      }
+      continue;
+    }
+
+    if(/^exists:/i.test(term)){
+      const target=term.substring(7).replace(/\.$/,"");
+      const a=await getAAddresses(target,ctx);
+      if(a.error==="limit") return spfResult("permerror","SPF DNS lookup limit exceeded while evaluating exists:"+target,ctx);
+      if(a.error==="temperror") return spfResult("temperror","Temporary DNS error while evaluating exists:"+target,ctx);
+      if(a.addresses.length) return spfResult(spfResultFromQualifier(q),`Matched exists:${target}`,ctx);
+      continue;
+    }
+
+    if(/^ptr(?::|$)/i.test(term)){
+      // PTR is deprecated and costly; support it for standards compatibility.
+      const target=(term.substring(3).replace(/^:/,"")||domain).replace(/\.$/,"");
+      const rev=ip.split(".").reverse().join(".")+".in-addr.arpa";
+      const d=await dns(rev,12); ctx.lookups++;
+      if(d.unavailable) return spfResult("temperror","Temporary DNS error evaluating PTR",ctx);
+      const ptrs=answers(d).map(x=>String(x.data||"").replace(/\.$/,""));
+      for(const host of ptrs){
+        const wanted=target.toLowerCase();
+        if(host.toLowerCase()===wanted || host.toLowerCase().endsWith("."+wanted)){
+          const a=await getAAddresses(host,ctx);
+          if(a.error==="temperror") return spfResult("temperror","Temporary DNS error validating PTR host "+host,ctx);
+          if(a.addresses.includes(ip)) return spfResult(spfResultFromQualifier(q),`Matched PTR:${target} → ${host} → ${ip}`,ctx);
+        }
+      }
+      continue;
+    }
+
+    if(/^all$/i.test(term)){
+      return spfResult(spfResultFromQualifier(q),`Matched ${raw} in ${domain}`,ctx);
+    }
+  }
+
+  if(redirect){
+    const child=await evaluateSpf(redirect,ip,{
+      visited:new Set(ctx.visited),
+      depth:ctx.depth+1,
+      lookups:ctx.lookups,
+      voids:ctx.voids,
+      trace:ctx.trace.slice()
+    });
+    ctx.lookups=child.lookups; ctx.voids=child.voids;
+    if(child.status==="pass") return spfResult("pass",`redirect=${redirect} → ${child.detail}`,ctx);
+    if(child.status==="temperror" || child.status==="permerror") return child;
+    return spfResult(child.status,`redirect=${redirect} → ${child.detail}`,ctx);
+  }
+
+  return spfResult("neutral",`No SPF mechanism matched ${ip} in ${domain}`,ctx);
+}
+
+function spfCell(status,detail=""){
+  if(!status)return '<span class="check">Skipped</span>';
+  const labels={pass:"✓ PASS",softfail:"~ SOFTFAIL",fail:"✕ FAIL",none:"— NONE",neutral:"? NEUTRAL",temperror:"! TEMPERROR",permerror:"✕ PERMERROR"};
+  return '<span class="check '+status+'">'+(labels[status]||status.toUpperCase())+'</span>'+
+    (detail?'<div style="margin-top:5px;font-size:10px;color:#667085;line-height:1.35">'+escapeHtml(detail)+'</div>':"");
+}
+
+async function checkDomain(domain, ip){
+  const out={domain,ptr:null,a:null,mx:null,spf:null,dmarc:null,detail:[]};
+  const tasks=[];
+
+  if(document.getElementById("a").checked) tasks.push((async()=>{
+    const d=await dns(domain,1);
+    out.a=d.unavailable?"unavailable":answers(d).length>0?"ok":"bad";
+    out.aAnswers=answers(d).map(x=>x.data);
+  })());
+
+  if(document.getElementById("mx").checked) tasks.push((async()=>{
+    const d=await dns(domain,15);
+    out.mx=d.unavailable?"unavailable":answers(d).length>0?"ok":"bad";
+  })());
+
+  if(document.getElementById("spf").checked) tasks.push((async()=>{
+    const result=await evaluateSpf(domain, ip);
+    out.spf=result.status;
+    out.spfDetail=result.detail;
+  })());
+
+  if(document.getElementById("dmarc").checked) tasks.push((async()=>{
+    const d=await dns("_dmarc."+domain,16);
+    if(d.unavailable){out.dmarc="unavailable";return}
+    const txt=answers(d).map(x=>x.data||"").join(" ").toLowerCase();
+    out.dmarc=txt.includes("v=dmarc1")?"ok":"bad";
+  })());
+
+  await Promise.all(tasks);
+  return out;
+}
+
+async function reversePtr(ip){
+  const oct=ip.split(".").reverse().join(".")+".in-addr.arpa";
+  const d=await dns(oct,12);
+  if(d.unavailable) return {status:"unavailable",value:"DNS unavailable"};
+  const a=answers(d);
+  return a.length?{status:"ok",value:a.map(x=>x.data).join(", ")}:{status:"bad",value:"No PTR record"};
+}
+function cell(status, value=""){
+  if(!status)return '<span class="check">Skipped</span>';
+  const label=status==="ok"?"✓ Valid":status==="bad"?"✕ Missing":"! N/A";
+  return '<span class="check '+status+'">'+label+'</span>'+(value?'<div style="margin-top:5px;font-size:10px;color:#667085">'+escapeHtml(value)+'</div>':"");
+}
+async function runChecks(){
+  const parsed=parseInput();
+  if(!parsed.length){alert("Please add at least one entry.");return}
+
+  rows=[];
+  dnsCache.clear();
+
+  const progress=document.getElementById("progress");
+  const progressInfo=document.getElementById("progressInfo");
+  progress.style.display="block";
+  progressInfo.style.display="block";
+
+  const total=parsed.length;
+  let done=0;
+  let nextIndex=0;
+  const WORKERS=Math.min(12,total);
+
+  async function processItem(item){
+    const r={...item,id:item.domain,overall:"unavailable",ptr:null,a:null,mx:null,spf:null,dmarc:null,details:[]};
+
+    if(item.format==="invalid" || !isIPv4(item.ip) || !item.domain){
+      r.overall="issues";
+      r.details.push("Invalid format — use IP:domain or domain:IP");
+      return r;
+    }
+
+    const tasks=[];
+
+    if(document.getElementById("ptr").checked) tasks.push((async()=>{
+      const p=await reversePtr(item.ip);
+      r.ptr=p.status;
+      r.details.push("PTR: "+p.value);
+    })());
+
+    tasks.push((async()=>{
+      const d=await checkDomain(item.domain, item.ip);
+      r.a=d.a; r.mx=d.mx; r.spf=d.spf; r.dmarc=d.dmarc;
+      r.aAnswers=d.aAnswers||[];
+
+      const selected=["ptr","a","mx","spf","dmarc"].filter(k=>document.getElementById(k).checked);
+      const vals=selected.map(k=>k==="spf" ? (r[k]==="pass"?"ok":r[k]==="temperror"?"unavailable":"bad") : r[k]);
+
+      r.overall=vals.some(v=>v==="unavailable")?"unavailable":
+        vals.some(v=>v==="bad")?"issues":
+        (vals.length && vals.every(v=>v==="ok")?"valid":"issues");
+
+      if(document.getElementById("strict").checked && r.ptr!=="ok") r.overall="issues";
+
+      if(document.getElementById("a").checked && r.a==="ok"){
+        if(r.aAnswers.includes(item.ip)){
+          r.details.push("A record matches supplied IP");
+        }else{
+          r.details.push("A record exists but does not match supplied IP");
+          r.overall="issues";
+        }
+      }
+    })());
+
+    await Promise.all(tasks);
+    return r;
+  }
+
+  async function worker(){
+    while(true){
+      const index=nextIndex++;
+      if(index>=total) return;
+      rows[index]=await processItem(parsed[index]);
+      done++;
+      progressInfo.textContent=`Checking ${done} / ${total}...`;
+    }
+  }
+
+  await Promise.all(Array.from({length:WORKERS},()=>worker()));
+
+  progress.style.display="none";
+  progressInfo.textContent=`Completed ${total} / ${total}`;
+  setTimeout(()=>{progressInfo.style.display="none"},1800);
+  render();
+}
+
+function copyText(text){
+  if(navigator.clipboard && window.isSecureContext){
+    return navigator.clipboard.writeText(text);
+  }
+  const ta=document.createElement("textarea");
+  ta.value=text; ta.style.position="fixed"; ta.style.opacity="0";
+  document.body.appendChild(ta); ta.select();
+  document.execCommand("copy"); ta.remove();
+  return Promise.resolve();
+}
+
+function formatCopyLine(r){
+  return `${r.ip}:${r.domain}`;
+}
+
+async function copyFiltered(filter){
+  const list=rows.filter(r=>filter==="all"||r.overall===filter);
+  if(!list.length){alert("No results in this category.");return}
+  try{
+    await copyText(list.map(formatCopyLine).join("\n"));
+    const label=filter==="all"?"All":filter==="valid"?"Valid":filter==="issues"?"Issues":"Unavailable";
+    showToast(`${list.length} ${label} result${list.length>1?"s":""} copied`);
+  }catch(e){alert("Clipboard copy failed.")}
+}
+
+async function copyRow(index){
+  const r=rows[index];
+  if(!r)return;
+  try{
+    await copyText(formatCopyLine(r));
+    showToast("Result copied");
+  }catch(e){alert("Clipboard copy failed.")}
+}
+
+function showToast(message){
+  let t=document.getElementById("copyToast");
+  if(!t){
+    t=document.createElement("div");
+    t.id="copyToast";
+    t.style.cssText="position:fixed;right:24px;bottom:24px;background:#172033;color:#fff;padding:10px 14px;border-radius:9px;font-size:12px;font-weight:700;box-shadow:0 10px 25px rgba(16,24,40,.18);z-index:9999;opacity:0;transform:translateY(8px);transition:.2s";
+    document.body.appendChild(t);
+  }
+  t.textContent=message;
+  t.style.opacity="1";t.style.transform="translateY(0)";
+  clearTimeout(window.__copyToastTimer);
+  window.__copyToastTimer=setTimeout(()=>{t.style.opacity="0";t.style.transform="translateY(8px)"},1400);
+}
+
+function render(){
+  const tb=document.getElementById("results");
+  const filtered=rows.filter(r=>currentFilter==="all"||r.overall===currentFilter);
+  document.getElementById("total").textContent=rows.length;
+  document.getElementById("valid").textContent=rows.filter(r=>r.overall==="valid").length;
+  document.getElementById("issues").textContent=rows.filter(r=>r.overall==="issues").length;
+  document.getElementById("unavailable").textContent=rows.filter(r=>r.overall==="unavailable").length;
+  if(!filtered.length){tb.innerHTML='<tr><td colspan="10"><div class="empty"><strong>No results</strong>Nothing matches the selected filter.</div></td></tr>';return}
+  tb.innerHTML=filtered.map((r,i)=>`<tr>
+    <td>${i+1}</td><td class="mono">${escapeHtml(r.domain||r.id)}</td><td class="mono">${escapeHtml(r.ip)}</td>
+    <td><span class="status ${r.overall==="valid"?"ok":r.overall==="issues"?"bad":"warn"}">${r.overall==="valid"?"VALID":r.overall==="issues"?"ISSUES":"UNAVAILABLE"}</span></td>
+    <td>${cell(r.ptr)}</td><td>${cell(r.a)}</td><td>${cell(r.mx)}</td><td>${spfCell(r.spf, r.spfDetail||"")}</td><td>${cell(r.dmarc)}</td>
+    <td style="max-width:280px;color:#667085;font-size:10px"><div>${escapeHtml(r.details.join(" · "))}</div><button class="row-copy" onclick="copyRow(${rows.indexOf(r)})">Copy</button></td>
+  </tr>`).join("");
+}
+document.querySelectorAll(".filter").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll(".filter").forEach(x=>x.classList.remove("active"));b.classList.add("active");currentFilter=b.dataset.filter;render();
+}));
+function loadDemo(){document.getElementById("input").value=`51.77.106.49:adobsikepanjen.org
+51.77.106.50:meditationfree.in
+51.77.106.51:jbav257.com
+adobsikepanjen.org:51.77.106.49`;runChecks()}
+function clearAll(){document.getElementById("input").value="";rows=[];render()}
+function exportCSV(){
+  if(!rows.length){alert("Run a check first.");return}
+  const headers=["Domain","IP","Overall","PTR","A","MX","SPF","DMARC","Details"];
+  const esc=x=>`"${String(x??"").replaceAll('"','""')}"`;
+  const csv=[headers,...rows.map(r=>[r.domain||r.id,r.ip,r.overall,r.ptr,r.a,r.mx,r.spf,r.dmarc,r.details.join(" | ")])].map(x=>x.map(esc).join(",")).join("\\n");
+  const blob=new Blob([csv],{type:"text/csv;charset=utf-8"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="dns_ip_check_"+new Date().toISOString().slice(0,10)+".csv";a.click();URL.revokeObjectURL(a.href);
+}
+</script>
+</body>
+</html>
