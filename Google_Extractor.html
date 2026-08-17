@@ -166,16 +166,15 @@
   <div class="panel">
     <h2>1 · Connect Gmail</h2>
     <p class="hint">
-      Sign in securely with Google. This page runs entirely in your browser and uses the Gmail API in read-only mode.
-      Your access token is not sent to a custom backend.
+      Sign in securely with Google. This application runs entirely in your browser
+      and uses the Gmail API in read-only mode.
     </p>
     <div class="row">
-      <div class="field grow">
-        <label>Google OAuth Client</label>
-        <input type="text" value="8057863087-9uuu5c8obodo43me22m76q5rac39giq0.apps.googleusercontent.com" readonly aria-label="Google OAuth Client ID">
-      </div>
       <div class="field">
         <button class="btn-primary" id="connectBtn" onclick="connectGmail()">Sign in with Google</button>
+      </div>
+      <div class="field">
+        <button class="btn-outline" id="disconnectBtn" onclick="disconnectGmail()" style="display:none;">Disconnect</button>
       </div>
     </div>
     <div class="status-line" id="connStatus">Not connected.</div>
@@ -183,9 +182,8 @@
 
   <div class="panel" style="padding:14px 18px;">
     <p class="hint" style="margin:0;">
-      <strong>GitHub Pages setup:</strong> In Google Cloud, add your GitHub Pages origin
-      (for example <code>https://YOUR-USERNAME.github.io</code>) under
-      <em>Authorized JavaScript origins</em>. Do not add the repository path.
+      <strong>Privacy:</strong> Your Google access token is used only by this browser session.
+      No custom backend is used by this application.
     </p>
   </div>
 
@@ -283,11 +281,11 @@
         </thead>
         <tbody id="tbody"></tbody>
       </table>
-      <div class="empty-state" id="emptyState">Wala nta7 f data. Connecti w dwz "Extract" bach tbda.</div>
+      <div class="empty-state" id="emptyState">No data yet. Sign in and click "Extract" to begin.</div>
     </div>
   </div>
 
-  <footer>Runs entirely in your browser. Gmail access uses the <code>gmail.readonly</code> scope.</footer>
+  <footer>Gmail Auth Inspector · Runs entirely in your browser · Gmail access is read-only.</footer>
 </div>
 
 <script>
@@ -295,12 +293,25 @@ let accessToken = null;
 let tokenClient = null;
 let rows = [];          // extracted data
 let stopFlag = false;
+
+function disconnectGmail(){
+  accessToken = null;
+  tokenClient = null;
+  document.getElementById('pulse').classList.remove('live');
+  document.getElementById('extractBtn').disabled = true;
+  document.getElementById('disconnectBtn').style.display = 'none';
+  document.getElementById('connectBtn').style.display = 'inline-block';
+  const statusEl = document.getElementById('connStatus');
+  statusEl.textContent = 'Disconnected.';
+  statusEl.className = 'status-line';
+}
+const OAUTH_CLIENT_ID = '8057863087-9uuu5c8obodo43me22m76q5rac39giq0.apps.googleusercontent.com';
 const METADATA_HEADERS = ['From','Authentication-Results','Received','Received-SPF','Date','Subject'];
 const OAUTH_SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
 
 /* ===== OAuth ===== */
 function connectGmail(){
-  const clientId = '8057863087-9uuu5c8obodo43me22m76q5rac39giq0.apps.googleusercontent.com';
+  const clientId = OAUTH_CLIENT_ID;
   const statusEl = document.getElementById('connStatus');
   if (!clientId){
     statusEl.textContent = '⚠️ Google OAuth Client ID is not configured.';
@@ -318,10 +329,12 @@ function connectGmail(){
           return;
         }
         accessToken = resp.access_token;
-        statusEl.textContent = '✅ Connecté. Wjed tqder tdwz l Extract.';
+        statusEl.textContent = '✅ Successfully connected to Gmail. You can now run the extraction.';
         statusEl.className = 'status-line ok';
         document.getElementById('pulse').classList.add('live');
         document.getElementById('extractBtn').disabled = false;
+        document.getElementById('disconnectBtn').style.display = 'inline-block';
+        document.getElementById('connectBtn').style.display = 'none';
       }
     });
     tokenClient.requestAccessToken();
@@ -404,8 +417,8 @@ async function startExtraction(){
 
   document.getElementById('progressFill').style.width = '100%';
   statusEl.textContent = stopFlag
-    ? `⛔ Stopped. ${totalMatched} rows jm3o (mn ${totalProcessed} traités).`
-    : `✅ Completed. ${totalMatched} rows jm3o (mn ${totalProcessed} traités).`;
+    ? `⛔ Stopped. ${totalMatched} rows collected (mn ${totalProcessed} processed).`
+    : `✅ Completed. ${totalMatched} rows collected (mn ${totalProcessed} processed).`;
   statusEl.className = 'status-line ok';
   resetExtractButtons();
   populateFilterOptions();
@@ -588,7 +601,9 @@ function renderTable(){
   if (!filtered.length){
     tbody.innerHTML = '';
     emptyState.style.display = 'block';
-    emptyState.textContent = rows.length ? 'No results match the current filters.' : 'Wala nta7 f data. Connecti w dwz "Extract" bach tbda.';
+    emptyState.textContent = rows.length
+      ? 'No results match the current filters.'
+      : 'No data yet. Sign in and click "Extract" to begin.';
     return;
   }
   emptyState.style.display = 'none';
@@ -679,7 +694,7 @@ async function copyToClipboard(){
     btn.textContent = '✅ Copied';
     setTimeout(() => { btn.textContent = original; }, 1500);
   }catch(e){
-    alert('Ma qdertch ncopy automatiquement. Copy manuellement.');
+    alert('Could not copy automatically. Please copy manually.');
   }
 }
 </script>
